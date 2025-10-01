@@ -124,7 +124,7 @@ cleanup() {
     done < <(find "$GAME_DIRECTORY/.." \( \
         -name "backup_round*.txt" -mmin "+$((BACKUP_ROUND_PURGE_INTERVAL*60))" -o \
         -name "*.dem" -mmin "+$((DEMO_PURGE_INTERVAL*60))" -o \
-        \( -path "*/sharp/logs/*.txt" -mmin "+$((MODSHARP_JUNK_PURGE_INTERVAL*60))" \) \
+        \( -path "*/sharp/logs/*.log" -mmin "+$((MODSHARP_JUNK_PURGE_INTERVAL*60))" \) \
         \) -print0 2>/dev/null)
 
     local end_time
