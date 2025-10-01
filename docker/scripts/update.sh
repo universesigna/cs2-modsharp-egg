@@ -13,24 +13,24 @@ get_current_version() {
     local addon="$1"
     if [ -f "$VERSION_FILE" ]; then
         local version=$(grep "^$addon=" "$VERSION_FILE" | cut -d'=' -f2)
-        log_message "Current $addon version: ${version:-none}" "debug"
+        log_message "Current $addon version: ${version:-none}" "running"
         echo "$version"
     else
-        log_message "Version file not found, treating $addon as new installation" "debug"
+        log_message "Version file not found, treating $addon as new installation" "running"
         echo ""
     fi
 }
 
 create_modsharp_directories() {
     # Create required ModSharp directories
-    log_message "Creating required ModSharp directories..." "debug"
+    log_message "Creating required ModSharp directories..." "running"
     mkdir -p "$MODSHARP_DIR/modules"
     mkdir -p "$MODSHARP_DIR/logs"
     mkdir -p "$MODSHARP_DIR/configs"
     mkdir -p "$MODSHARP_DIR/data"
     mkdir -p "$MODSHARP_DIR/shared"
     
-    log_message "ModSharp directories created successfully" "debug"
+    log_message "ModSharp directories created successfully" "running"
     return 0
 }
 
@@ -39,13 +39,13 @@ copy_modsharp_files() {
     local core_config="$MODSHARP_DIR/configs/core.config.kv"
     local backup_config=""
     
-    log_message "Copying ModSharp files while preserving configurations..." "debug"
+    log_message "Copying ModSharp files while preserving configurations..." "running"
     
     # Backup existing core.config.kv if it exists
     if [ -f "$core_config" ]; then
         backup_config="$TEMP_DIR/core.config.kv.backup"
         cp "$core_config" "$backup_config"
-        log_message "Backed up existing core.config.kv" "debug"
+        log_message "Backed up existing core.config.kv" "running"
     fi
     
     # Copy all ModSharp files
@@ -54,7 +54,7 @@ copy_modsharp_files() {
     # Restore the backed up config file if it existed
     if [ -n "$backup_config" ] && [ -f "$backup_config" ]; then
         cp "$backup_config" "$core_config"
-        log_message "Restored existing core.config.kv configuration" "debug"
+        log_message "Restored existing core.config.kv configuration" "running"
         rm -f "$backup_config"
     fi
     
@@ -71,10 +71,10 @@ update_version_file() {
     
     if grep -q "^$addon=" "$VERSION_FILE" 2>/dev/null; then
         sed -i "s/^$addon=.*/$addon=$new_version/" "$VERSION_FILE"
-        log_message "Updated $addon version to: $new_version" "debug"
+        log_message "Updated $addon version to: $new_version" "running"
     else
         echo "$addon=$new_version" >> "$VERSION_FILE"
-        log_message "Added $addon version: $new_version" "debug"
+        log_message "Added $addon version: $new_version" "running"
     fi
 }
 
@@ -85,7 +85,7 @@ handle_download_and_extract() {
     local extract_dir="$3"
     local file_type="$4"  # "zip" or "tar.gz"
 
-    log_message "Downloading from: $url" "debug"
+    log_message "Downloading from: $url" "running"
 
     # Download with timeout and retry
     local max_retries=3
@@ -109,7 +109,7 @@ handle_download_and_extract() {
         return 1
     fi
 
-    log_message "Extracting to $extract_dir" "debug"
+    log_message "Extracting to $extract_dir" "running"
     mkdir -p "$extract_dir"
 
     case $file_type in
@@ -141,7 +141,7 @@ check_version() {
         return 0
     fi
 
-    log_message "No new version of $addon available. Current: $current" "debug"
+    log_message "No new version of $addon available. Current: $current" "running"
     return 1
 }
 
@@ -209,7 +209,7 @@ get_latest_dotnet_version() {
     fi
     
     # If it's a major version (e.g., "9"), fetch the latest patch version
-    log_message "Fetching latest .NET $requested_version runtime version..." "debug"
+    log_message "Fetching latest .NET $requested_version runtime version..." "running"
     
     # Query Microsoft's official releases API for the latest version
     local releases_response=$(curl -s "https://api.github.com/repos/dotnet/core/releases" 2>/dev/null)
@@ -217,7 +217,7 @@ get_latest_dotnet_version() {
         # Look for the latest release that starts with the requested major version
         local latest_version=$(echo "$releases_response" | jq -r --arg major "$requested_version" '.[] | select(.tag_name | startswith("v" + $major + ".")) | .tag_name' | head -1 | sed 's/^v//')
         if [ -n "$latest_version" ]; then
-            log_message "Found latest .NET $requested_version version: $latest_version" "debug"
+            log_message "Found latest .NET $requested_version version: $latest_version" "running"
             echo "$latest_version"
             return 0
         fi
@@ -228,7 +228,7 @@ get_latest_dotnet_version() {
     if [ -n "$alt_response" ]; then
         local latest_version=$(echo "$alt_response" | jq -r --arg major "$requested_version" '.releases-index[] | select(.["channel-version"] | startswith($major + ".")) | .["latest-release"]' | head -1)
         if [ -n "$latest_version" ]; then
-            log_message "Found latest .NET $requested_version version: $latest_version" "debug"
+            log_message "Found latest .NET $requested_version version: $latest_version" "running"
             echo "$latest_version"
             return 0
         fi
@@ -248,7 +248,7 @@ install_dotnet_runtime() {
     
     # Check if we need to update .NET runtime
     if [ "$current_dotnet_version" = "$dotnet_version" ]; then
-        log_message ".NET runtime already up to date: $dotnet_version" "debug"
+        log_message ".NET runtime already up to date: $dotnet_version" "running"
         return 0
     fi
     
@@ -304,7 +304,7 @@ update_modsharp() {
     
     # Check if we already have this version
     if [ "$current_version" = "$new_version" ]; then
-        log_message "ModSharp is already up to date: $new_version" "debug"
+        log_message "ModSharp is already up to date: $new_version" "running"
         return 0
     fi
     
@@ -462,7 +462,7 @@ update_modsharp_fallback() {
     
     # Check if we already have this version
     if [ "$current_version" = "$new_version" ]; then
-        log_message "ModSharp is already up to date: $new_version" "debug"
+        log_message "ModSharp is already up to date: $new_version" "running"
         return 0
     fi
     
