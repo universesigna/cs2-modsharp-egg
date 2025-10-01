@@ -4,7 +4,7 @@
         "version": "PTDL_v2",
         "update_url": null
     },
-    "exported_at": "2025-10-01T19:36:31+00:00",
+    "exported_at": "2025-10-01T20:03:25+00:00",
     "name": "CS2 Modsharp EGG (Fork from: K4ryuu)",
     "author": "egg@modsharp.com",
     "description": "The SteamRT3 Platform image for Pterodactyl CS2 servers is packed with numerous features, designed to simplify server management and reduce hassle.",
@@ -162,7 +162,7 @@
             "name": "Custom Parameters",
             "description": "Custom startup parameters to add to the command line.",
             "env_variable": "CUSTOM_PARAMS",
-            "default_value": "",
+            "default_value": "-fucking_lua_map",
             "user_viewable": true,
             "user_editable": true,
             "rules": "string|nullable",
