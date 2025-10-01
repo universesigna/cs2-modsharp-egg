@@ -282,7 +282,7 @@ update_modsharp() {
     fi
 
     # Get latest successful workflow run from GitHub Actions
-    local workflow_runs_response=$(curl -s "https://api.github.com/repos/Kxnrl/modsharp-public/actions/workflows/master.yml/runs?status=completed&per_page=10")
+    local workflow_runs_response=$(curl -s "https://api.github.com/repos/Kxnrl/modsharp-public/actions/workflows/master.yml/runs?status=completed&per_page=50")
     if [ -z "$workflow_runs_response" ]; then
         log_message "Failed to get ModSharp workflow runs" "error"
         return 1
