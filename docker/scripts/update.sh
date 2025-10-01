@@ -28,6 +28,7 @@ create_modsharp_directories() {
     mkdir -p "$MODSHARP_DIR/logs"
     mkdir -p "$MODSHARP_DIR/configs"
     mkdir -p "$MODSHARP_DIR/data"
+    mkdir -p "$MODSHARP_DIR/shared"
     
     log_message "ModSharp directories created successfully" "debug"
     return 0
