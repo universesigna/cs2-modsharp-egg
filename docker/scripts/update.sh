@@ -13,10 +13,8 @@ get_current_version() {
     local addon="$1"
     if [ -f "$VERSION_FILE" ]; then
         local version=$(grep "^$addon=" "$VERSION_FILE" | cut -d'=' -f2)
-        log_message "Current $addon version: ${version:-none}" "running"
         echo "$version"
     else
-        log_message "Version file not found, treating $addon as new installation" "running"
         echo ""
     fi
 }
@@ -301,6 +299,9 @@ update_modsharp() {
     # Use commit SHA (first 7 chars) + date as version identifier
     local new_version="git-${commit_sha:0:7}-$(date -d "$run_date" +%Y%m%d 2>/dev/null || echo "unknown")"
     local current_version=$(get_current_version "ModSharp")
+    
+    log_message "Current ModSharp version: ${current_version:-none}" "running"
+    log_message "Available ModSharp version: $new_version" "running"
     
     # Check if we already have this version
     if [ "$current_version" = "$new_version" ]; then
