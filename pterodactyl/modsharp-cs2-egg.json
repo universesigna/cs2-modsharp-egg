@@ -4,16 +4,16 @@
         "version": "PTDL_v2",
         "update_url": null
     },
-    "exported_at": "2024-06-13T21:31:46+02:00",
+    "exported_at": "2025-10-01T19:36:31+00:00",
     "name": "CS2 Modsharp EGG (Fork from: K4ryuu)",
     "author": "egg@modsharp.com",
     "description": "The SteamRT3 Platform image for Pterodactyl CS2 servers is packed with numerous features, designed to simplify server management and reduce hassle.",
     "features": null,
     "docker_images": {
-        "CS2 Modsharp": "docker.io/prefixas/cs2-modsharp-egg:test"
+        "ModSharp Egg": "ghcr.io\/prefix\/cs2-modsharp-egg:latest"
     },
     "file_denylist": [],
-    "startup": "./game/cs2.sh {{CUSTOM_PARAMS}} -dedicated +ip 0.0.0.0 -port {{SERVER_PORT}} +map {{SRCDS_MAP}} -dual_addon {{SRCDS_WORKSHOP_ID}} -maxplayers {{SRCDS_MAXPLAYERS}} +sv_setsteamaccount {{STEAM_ACC}} +game_type {{GAME_TYPE}} +game_mode {{GAME_MODE}}",
+    "startup": ".\/game\/cs2.sh {{CUSTOM_PARAMS}} -dedicated +ip 0.0.0.0 -port {{SERVER_PORT}} +map {{SRCDS_MAP}} -dual_addon {{SRCDS_WORKSHOP_ID}} -maxplayers {{SRCDS_MAXPLAYERS}} +sv_setsteamaccount {{STEAM_ACC}} +game_type {{GAME_TYPE}} +game_mode {{GAME_MODE}}",
     "config": {
         "files": "{}",
         "startup": "{\r\n    \"done\": \"Connection to Steam servers successful\"\r\n}",
@@ -22,8 +22,8 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\r\n# steamcmd Base Installation Script\r\n#\r\n# Server Files: /mnt/server\r\n## just in case someone removed the defaults.\r\nif [ \"${STEAM_USER}\" == \"\" ]; then\r\nSTEAM_USER=anonymous\r\nSTEAM_PASS=\"\"\r\nSTEAM_AUTH=\"\"\r\nfi\r\n## download and install steamcmd\r\ncd /tmp\r\nmkdir -p /mnt/server/steamcmd\r\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\r\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\r\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\r\ncd /mnt/server/steamcmd\r\n# SteamCMD fails otherwise for some reason, even running as root.\r\n# This is changed at the end of the install process anyways.\r\nchown -R root:root /mnt\r\nexport HOME=/mnt/server\r\n## install game using steamcmd\r\n./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} ${EXTRA_FLAGS} +quit ## other flags may be needed depending on install. looking at you cs 1.6\r\n## set up 32 bit libraries\r\nmkdir -p /mnt/server/.steam/sdk32\r\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\r\n## set up 64 bit libraries\r\nmkdir -p /mnt/server/.steam/sdk64\r\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so",
-            "container": "ghcr.io/pterodactyl/installers:debian",
+            "script": "#!\/bin\/bash\r\n# steamcmd Base Installation Script\r\n#\r\n# Server Files: \/mnt\/server\r\n## just in case someone removed the defaults.\r\nif [ \"${STEAM_USER}\" == \"\" ]; then\r\nSTEAM_USER=anonymous\r\nSTEAM_PASS=\"\"\r\nSTEAM_AUTH=\"\"\r\nfi\r\n## download and install steamcmd\r\ncd \/tmp\r\nmkdir -p \/mnt\/server\/steamcmd\r\ncurl -sSL -o steamcmd.tar.gz https:\/\/steamcdn-a.akamaihd.net\/client\/installer\/steamcmd_linux.tar.gz\r\ntar -xzvf steamcmd.tar.gz -C \/mnt\/server\/steamcmd\r\nmkdir -p \/mnt\/server\/steamapps # Fix steamcmd disk write error when this folder is missing\r\ncd \/mnt\/server\/steamcmd\r\n# SteamCMD fails otherwise for some reason, even running as root.\r\n# This is changed at the end of the install process anyways.\r\nchown -R root:root \/mnt\r\nexport HOME=\/mnt\/server\r\n## install game using steamcmd\r\n.\/steamcmd.sh +force_install_dir \/mnt\/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} ${EXTRA_FLAGS} +quit ## other flags may be needed depending on install. looking at you cs 1.6\r\n## set up 32 bit libraries\r\nmkdir -p \/mnt\/server\/.steam\/sdk32\r\ncp -v linux32\/steamclient.so ..\/.steam\/sdk32\/steamclient.so\r\n## set up 64 bit libraries\r\nmkdir -p \/mnt\/server\/.steam\/sdk64\r\ncp -v linux64\/steamclient.so ..\/.steam\/sdk64\/steamclient.so",
+            "container": "ghcr.io\/pterodactyl\/installers:debian",
             "entrypoint": "bash"
         }
     },
@@ -90,7 +90,7 @@
         },
         {
             "name": "Game Server Login Token (GSLT)",
-            "description": "The Steam Account Token required for the server to be displayed publicly. https://steamcommunity.com/dev/managegameservers",
+            "description": "The Steam Account Token required for the server to be displayed publicly. https:\/\/steamcommunity.com\/dev\/managegameservers",
             "env_variable": "STEAM_ACC",
             "default_value": "",
             "user_viewable": true,
@@ -140,7 +140,7 @@
         },
         {
             "name": "Filter - Enabled",
-            "description": "Enable or disable the console filter to hide specific messages. Configure it using the file at '/game/mute_messages.cfg' when enabled.",
+            "description": "Enable or disable the console filter to hide specific messages. Configure it using the file at '\/game\/mute_messages.cfg' when enabled.",
             "env_variable": "ENABLE_FILTER",
             "default_value": "0",
             "user_viewable": true,
@@ -192,10 +192,10 @@
             "name": "Auto Restart - API URL",
             "description": "The panel URL used for API calls.\r\nThis should remain hidden from users. Update the default value to ensure all new servers use this setting.",
             "env_variable": "PTERODACTYL_URL",
-            "default_value": "https://panel.domain.com",
+            "default_value": "https:\/\/panel.domain.com",
             "user_viewable": false,
             "user_editable": false,
-            "rules": "nullable|required|regex:/^https?:\\/\\//",
+            "rules": "nullable|required|regex:\/^https?:\\\/\\\/\/",
             "field_type": "text"
         },
         {
@@ -205,7 +205,7 @@
             "default_value": "",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "nullable|string|regex:/^(ptlc_|pacc_).{43}$/",
+            "rules": "nullable|string|regex:\/^(ptlc_|pacc_).{43}$\/",
             "field_type": "text"
         },
         {
@@ -230,12 +230,12 @@
         },
         {
             "name": "Auto Restart - Steam API Key",
-            "description": "Your personal Steam API key to check for updates. You can generate a new one at https://steamcommunity.com/dev/apikey.",
+            "description": "Your personal Steam API key to check for updates. You can generate a new one at https:\/\/steamcommunity.com\/dev\/apikey.",
             "env_variable": "STEAM_API_KEY",
             "default_value": "",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "nullable|string|regex:/^[0-9A-F]{32}$/",
+            "rules": "nullable|string|regex:\/^[0-9A-F]{32}$\/",
             "field_type": "text"
         },
         {
@@ -250,7 +250,7 @@
         },
         {
             "name": "Egg - File Logging",
-            "description": "Log Egg messages to /egg.log, which is stored for 48 hours.",
+            "description": "Log Egg messages to \/egg.log, which is stored for 48 hours.",
             "env_variable": "LOG_FILE_ENABLED",
             "default_value": "0",
             "user_viewable": false,
@@ -270,7 +270,7 @@
         },
         {
             "name": "ModSharp - GitHub Token",
-            "description": "Optional GitHub personal access token for downloading ModSharp artifacts from GitHub Actions. Required for accessing workflow artifacts. Generate at: https://github.com/settings/tokens",
+            "description": "Optional GitHub personal access token for downloading ModSharp artifacts from GitHub Actions. Required for accessing workflow artifacts. Generate at: https:\/\/github.com\/settings\/tokens",
             "env_variable": "GITHUB_TOKEN",
             "default_value": "",
             "user_viewable": true,
