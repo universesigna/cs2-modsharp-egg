@@ -70,17 +70,13 @@ cleanup() {
     # Configuration
     local BACKUP_ROUND_PURGE_INTERVAL=24
     local DEMO_PURGE_INTERVAL=168
-    local CSS_JUNK_PURGE_INTERVAL=72
-    local ACCELERATOR_DUMP_PURGE_INTERVAL=168
-    local ACCELERATOR_DUMPS_DIR="${OUTPUT_DIR:-$GAME_DIRECTORY}/AcceleratorCS2/dumps"
+    local MODSHARP_JUNK_PURGE_INTERVAL=72
 
     # Statistics for debug
     declare -A stats=(
         ["backup_rounds"]=0
         ["demos"]=0
-        ["css_logs"]=0
-        ["accelerator_logs"]=0
-        ["accelerator_dumps"]=0
+        ["modsharp_logs"]=0
     )
 
     local start_time
@@ -122,28 +118,14 @@ cleanup() {
             log_deletion "$file" "backup_rounds"
         elif [[ "$file" == *.dem ]]; then
             log_deletion "$file" "demos"
-        elif [[ "$file" == */addons/counterstrikesharp/logs/* ]]; then
-            log_deletion "$file" "css_logs"
+        elif [[ "$file" == */sharp/logs/* ]]; then
+            log_deletion "$file" "modsharp_logs"
         fi
-    done < <(find "$GAME_DIRECTORY" \( \
+    done < <(find "$GAME_DIRECTORY/.." \( \
         -name "backup_round*.txt" -mmin "+$((BACKUP_ROUND_PURGE_INTERVAL*60))" -o \
         -name "*.dem" -mmin "+$((DEMO_PURGE_INTERVAL*60))" -o \
-        \( -path "*/addons/counterstrikesharp/logs/*.txt" -mmin "+$((CSS_JUNK_PURGE_INTERVAL*60))" \) \
+        \( -path "*/sharp/logs/*.txt" -mmin "+$((MODSHARP_JUNK_PURGE_INTERVAL*60))" \) \
         \) -print0 2>/dev/null)
-
-    # Handle Accelerator logs with proper error checking
-    if [ -d "$ACCELERATOR_DUMPS_DIR" ]; then
-        while IFS= read -r -d '' file; do
-            if [[ "$file" == *.dmp.txt ]]; then
-                log_deletion "$file" "accelerator_logs"
-            else
-                log_deletion "$file" "accelerator_dumps"
-            fi
-        done < <(find "$ACCELERATOR_DUMPS_DIR" \( \
-            -name "*.dmp.txt" -o \
-            -name "*.dmp" \
-            \) -mmin "+$((ACCELERATOR_DUMP_PURGE_INTERVAL*60))" -print0 2>/dev/null)
-    fi
 
     local end_time
     end_time=$(date +%s)

@@ -1,111 +1,16 @@
--- update - 2025.03.27
+-- update - 2025.10.01
 
-- feat: Added support for the new CounterStrikeSharp versioning schema
-- feat: Added support for with-runtime and without runtime installs
-
--- update - 2024.11.28
-
-- feat: Added SteamCMD installed, which useful for centralized file systems or to repair user deletions
-- fix: Update validated the game files forcefully
-- fix: Udpdate broke after a SteamCMD function update
-- fix: Egg log file was not used properly by the logger
-- upgrade: Steam version checker to prevent caching
-
--- update - 2024.11.21 - Optimisation Update
-
-- feat: Junk cleaner now shows the freed space, duration and overall counter
-- feat: Message filter now supports @prefix for exact pattern matching
-- feat: Message filter now displays detailed pattern load statistics on startup
-- feat: Patterns can now have replacement values for masking sensitive data
-- optimise: Update system now has centralized download and extract handling
-- optimise: Changed to startup only log cleanup for better performance
-- optimise: Junk cleaner now uses a better way to find and eliminate the files
-- optimise: Removed some redundant validations
-- optimise: Message filter now processes patterns only once during initialization
-- optimise: Pattern matching now uses hash maps for faster lookups
-- optimise: Message filter now has early return for empty messages
-- optimise: Added retry mechanism for downloads with proper error handling
-- optimise: Version checking is now centralized and more efficient
-- optimise: Improved file operations with less I/O usage
-- optimise: Replaced awk with sed for better performance
-- optimise: Muted unnecessary file operation outputs
-- optimise: Junk cleaner wont show the exact deleted files except in debug mode for less I/O operations
-- optimise: Steam token masking is now integrated into the pattern system
-- fix: Metamod gameinfo update issues
-- fix: All values have now a default value to prevent issues by missing variables
-- fix: Added proper error handling and signal management
-
--- update - 2024.11.18
-
-- feat: Added option to save egg logs to a file with a 48-hour rotation
-- feat: Added option to change the log level for console and file log messages
-- upgrade: Allowed the countdown command to be empty
-- remove: Removed some redundant code
-
--- update - 2024.11.17
-
-- feat: Add environment default value setter to ensure required variables are maintained
-- chore: Auto-Restart game version checker now uses different file
-- chore: Changed max slot number to 64
-- chore: Changed Auto-Restart API KEY to match the correct length
-- fix: Auto-Restart now initialize game version to file if not present
-- fix: Prevent Auto-Restart from validating during countdown if an update is in progress
-- remove: Unused source include in this version of the egg
-
--- update - 2024.11.16
-
-- fix: The Steam token mask removed other matching patterns aswell from being visible
-- fix: Removed maxplayers_override from startup as its deprecated
-
--- update - 2024.11.15
-
-- feat: Added Auto-Restart feature to automatically restart the server if it has a newer version
-- feat: The console now censures the Steam Token of the user for security reasons (sending logs, screenshots, etc.)
-- upgrade: Changed MetaMod auto-updater to use GitHub aswell due to some users had issues calling alliedmods.net
-- refactor: The full script has been refactored for easier maintanaibility
-- chore: Changed some of the variable rules to use boolean
-- chore: Changed some of the variables naming and descriptions for better understanding
-
--- update - 2024.10.02
-
-- fix: Round backup cleaner removed some other files
-
--- update - 2024.08.20
-
-- fix: Server shutdown was handled like Segmentation fault
-- fix: Server shown crash state and no answer dialog instead of kicking users
-
--- update - 2024.07.28
-
-- feat: Added console filter to block unwanted messages (import the egg again to have it)
-- feat: Added preview mode for console filter to show what messages you block exactly (import the egg again to have it)
-- chore: Fix some spelling and grammar mistakes
-
--- update - 2024.07.24
-
-- fix: Junk cleaner was not working at all
-
--- update - 2024.07.01
-
-- feat: Added Dev branch support with tag `dev` (import the egg again to have it)
-- feat: Added proper names for the images (import the egg again to have it)
-- fix: Removed redundant codes at logging and coloring sections
-- fix: Removed debug message leftovers at metamod updater
-- fix: Removed error upon server shutdown and added a good message instead
-- fix: Re-phrased some messages for better understanding
-- fix: Removed cleanup messages with 0 files for less spam
-
--- update - 2024.06.20
-
-- upgrade: Metamod version finder logic
-- fix: Metamod updater not working correctly
-- fix: Changed updaters to start the server even if the download fails
-
--- update - 2024.06.15
-
-- fix: Variable name miss-matches
-- fix: MetaMod files are not overwritten correctly
-
--- update - 2024.06.14
-
-- fix: Issues where you was unable to disable the scripts
+- feat: Replaced Metamod and CounterStrike Sharp with ModSharp (all-in-one solution)
+- feat: Added automatic .NET 9 runtime installation for ModSharp
+- feat: Updated gameinfo.gi configuration to use 'Game sharp' instead of 'Game csgo/addons/metamod'
+- feat: Updated cleanup scripts to handle ModSharp logs instead of CSS logs
+- feat: ModSharp files are now placed in ./game/sharp directory as per installation requirements
+- feat: ModSharp now fetches latest builds from GitHub Actions workflow (Kxnrl/modsharp-public)
+- feat: Added GitHub token support for accessing workflow artifacts
+- feat: Added fallback to GitHub releases API if workflow artifact download fails
+- feat: Dynamic version detection using commit SHA and build date
+- feat: Enhanced version tracking for both .NET runtime and ModSharp to prevent unnecessary downloads
+- feat: Improved logging and debug information for version management
+- feat: Added configurable .NET version in pterodactyl config (DOTNET_VERSION)
+- feat: Support for major version specification (e.g., "9" gets latest 9.x.x version)
+- feat: Automatic fetching of latest .NET patch versions from Microsoft API

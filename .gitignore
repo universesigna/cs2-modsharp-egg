@@ -61,3 +61,4 @@ __MACOSX/
 bin/
 obj/
 *.sln
+build-and-push.bat

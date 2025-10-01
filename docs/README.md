@@ -20,7 +20,7 @@ layout:
 
 # Welcome
 
-Welcome to the official documentation for Kitsune-Lab’s CS2-Egg project.
+Welcome to the official documentation for CS2 Modsharp EGG (Fork of: Kitsune-Lab’s CS2-Egg project).
 
 The system includes various features designed to simplify server management. Automation tools ensure that your server and key add-ons are always up-to-date, clear unnecessary files, filter console outputs, and automatically restart the server when a new game version is detected—eliminating the need to manually track game updates.
 
@@ -34,10 +34,9 @@ The CS2-Egg project was initially created for use with the Pterodactyl platform,
 * **Junk Cleaner:**
   * Round backups: Retain for 24 hours
   * Logs: Retain for 3 days
-  * CSS logs: Retain for 3 days
-  * Accelerator logs: Retain for 7 days
+  * ModSharp logs: Retain for 3 days
   * Demo files: Retain for 7 days
-* **GameInfo Updater:** Automatically updates GameInfo file to maintain MetaMod reference.
-* **Auto-Updater:** Automatically updates CounterStrikeSharp and MetaMod to the latest versions on restart, when necessary.
+* **GameInfo Updater:** Automatically updates GameInfo file to maintain ModSharp reference.
+* **Auto-Updater:** Automatically updates ModSharp to the latest versions on restart, when necessary.
 * **Console Filter:** Blocks your unwanted messages from appearing in the console.
 * Premade variables to support custom parameters safely by user

@@ -11,7 +11,7 @@ NC='\033[0m'
 LOG_FILE_ENABLED="${LOG_FILE_ENABLED:=0}"
 LOG_FILE="${LOG_FILE:=./egg.log}"
 LOG_RETENTION_HOURS="${LOG_RETENTION_HOURS:=48}"
-PREFIX="${PREFIX:=${RED}[KitsuneLab]${WHITE} > }"
+PREFIX="${PREFIX:=${RED}[CS2 Pterodactyl]${WHITE} > }"
 
 # Pre-calculate log level priority
 declare -A log_levels=(
