@@ -113,7 +113,7 @@ download_github_artifact() {
     return 0
 }
 
-# Extract GitHub artifact (handles nested zip structure)
+# Extract GitHub artifact (simple extraction, sharp folder is at root)
 extract_github_artifact() {
     local artifact_zip="$1"
     local extract_base="$2"
@@ -127,19 +127,16 @@ extract_github_artifact() {
         return 1
     fi
     
-    # Extract outer zip
+    # Extract the zip
     mkdir -p "$extract_base"
-    log_message "Extracting outer zip to: $extract_base" "running"
     if ! unzip -qq -o "$artifact_zip" -d "$extract_base" 2>&1; then
-        log_message "Failed to extract $artifact_name artifact outer zip" "error"
+        log_message "Failed to extract $artifact_name artifact" "error"
         return 1
     fi
     
-    # Find and extract inner zip
-    log_message "Looking for inner zip in: $extract_base" "running"
-    local inner_zip=$(find "$extract_base" -name "*.zip" -type f | head -1)
-    if [ -z "$inner_zip" ]; then
-        log_message "No inner zip found in $artifact_name artifact" "error"
+    # The sharp folder should be at the root of the extracted content
+    if [ ! -d "$extract_base/sharp" ]; then
+        log_message "No sharp folder found in $artifact_name artifact" "error"
         log_message "Contents of $extract_base:" "running"
         ls -la "$extract_base" 2>&1 | while read -r line; do
             log_message "  $line" "running"
@@ -147,18 +144,9 @@ extract_github_artifact() {
         return 1
     fi
     
-    log_message "Found inner zip: $inner_zip" "running"
-    local inner_extract="$extract_base-inner"
-    mkdir -p "$inner_extract"
-    log_message "Extracting inner zip to: $inner_extract" "running"
-    if ! unzip -qq -o "$inner_zip" -d "$inner_extract" 2>&1; then
-        log_message "Failed to extract inner $artifact_name zip" "error"
-        return 1
-    fi
-    
-    log_message "Successfully extracted to: $inner_extract" "running"
+    log_message "Successfully extracted $artifact_name artifact" "running"
     # Return the path to extracted content
-    echo "$inner_extract"
+    echo "$extract_base"
     return 0
 }
 
@@ -476,16 +464,18 @@ update_modsharp() {
 
     # Find both Linux and Extensions artifacts
     local linux_artifact_url=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-linux")) | .archive_download_url // empty' | head -1)
+    local linux_artifact_name=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-linux")) | .name // empty' | head -1)
     local extensions_artifact_url=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-extensions")) | .archive_download_url // empty' | head -1)
+    local extensions_artifact_name=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-extensions")) | .name // empty' | head -1)
     
     if [ -z "$linux_artifact_url" ]; then
         log_message "No Linux ModSharp artifact found in workflow run $run_id" "error"
         return 1
     fi
 
-    log_message "Found ModSharp Linux artifact for version $new_version" "running"
+    log_message "Found ModSharp Linux artifact: $linux_artifact_name" "running"
     if [ -n "$extensions_artifact_url" ]; then
-        log_message "Found ModSharp Extensions artifact for version $new_version" "running"
+        log_message "Found ModSharp Extensions artifact: $extensions_artifact_name" "running"
     else
         log_message "Warning: No Extensions artifact found - extensions will not be installed" "warn"
     fi
