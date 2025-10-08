@@ -121,27 +121,42 @@ extract_github_artifact() {
     
     log_message "Extracting $artifact_name artifact..." "running"
     
+    # Verify the zip file exists and is not empty
+    if [ ! -s "$artifact_zip" ]; then
+        log_message "Artifact zip file is missing or empty: $artifact_zip" "error"
+        return 1
+    fi
+    
     # Extract outer zip
     mkdir -p "$extract_base"
-    if ! unzip -qq -o "$artifact_zip" -d "$extract_base"; then
-        log_message "Failed to extract $artifact_name artifact" "error"
+    log_message "Extracting outer zip to: $extract_base" "running"
+    if ! unzip -qq -o "$artifact_zip" -d "$extract_base" 2>&1; then
+        log_message "Failed to extract $artifact_name artifact outer zip" "error"
         return 1
     fi
     
     # Find and extract inner zip
+    log_message "Looking for inner zip in: $extract_base" "running"
     local inner_zip=$(find "$extract_base" -name "*.zip" -type f | head -1)
     if [ -z "$inner_zip" ]; then
         log_message "No inner zip found in $artifact_name artifact" "error"
+        log_message "Contents of $extract_base:" "running"
+        ls -la "$extract_base" 2>&1 | while read -r line; do
+            log_message "  $line" "running"
+        done
         return 1
     fi
     
+    log_message "Found inner zip: $inner_zip" "running"
     local inner_extract="$extract_base-inner"
     mkdir -p "$inner_extract"
-    if ! unzip -qq -o "$inner_zip" -d "$inner_extract"; then
+    log_message "Extracting inner zip to: $inner_extract" "running"
+    if ! unzip -qq -o "$inner_zip" -d "$inner_extract" 2>&1; then
         log_message "Failed to extract inner $artifact_name zip" "error"
         return 1
     fi
     
+    log_message "Successfully extracted to: $inner_extract" "running"
     # Return the path to extracted content
     echo "$inner_extract"
     return 0
@@ -160,21 +175,35 @@ install_modsharp_artifact() {
     
     # Download artifact
     if ! download_github_artifact "$artifact_url" "$artifact_file" "$artifact_name"; then
+        log_message "Download failed for $artifact_name" "error"
         return 1
     fi
     
     # Extract artifact (returns path to extracted content)
+    log_message "Starting extraction for $artifact_name..." "running"
     local extracted_path
     extracted_path=$(extract_github_artifact "$artifact_file" "$extract_base" "$artifact_name")
-    if [ $? -ne 0 ] || [ -z "$extracted_path" ]; then
+    local extract_result=$?
+    
+    log_message "Extraction result: $extract_result, path: $extracted_path" "running"
+    
+    if [ $extract_result -ne 0 ] || [ -z "$extracted_path" ]; then
+        log_message "Extraction failed for $artifact_name (result: $extract_result)" "error"
         return 1
     fi
     
     # Verify sharp folder exists
+    log_message "Checking for sharp folder in: $extracted_path" "running"
     if [ ! -d "$extracted_path/sharp" ]; then
         log_message "$artifact_name artifact structure not recognized - no sharp folder found" "error"
+        log_message "Contents of $extracted_path:" "running"
+        ls -la "$extracted_path" 2>&1 | while read -r line; do
+            log_message "  $line" "running"
+        done
         return 1
     fi
+    
+    log_message "Found sharp folder, proceeding with installation" "running"
     
     # Install files
     if [ "$is_core" = "true" ]; then
