@@ -77,6 +77,99 @@ update_version_file() {
     fi
 }
 
+# Download GitHub Actions artifact with authentication
+download_github_artifact() {
+    local artifact_url="$1"
+    local output_file="$2"
+    local artifact_name="$3"
+    
+    log_message "Downloading $artifact_name artifact..." "running"
+    
+    if ! curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    -o "$output_file" "$artifact_url"; then
+        log_message "Failed to download $artifact_name artifact" "error"
+        return 1
+    fi
+    
+    return 0
+}
+
+# Extract GitHub artifact (handles nested zip structure)
+extract_github_artifact() {
+    local artifact_zip="$1"
+    local extract_base="$2"
+    local artifact_name="$3"
+    
+    log_message "Extracting $artifact_name artifact..." "running"
+    
+    # Extract outer zip
+    mkdir -p "$extract_base"
+    if ! unzip -qq -o "$artifact_zip" -d "$extract_base"; then
+        log_message "Failed to extract $artifact_name artifact" "error"
+        return 1
+    fi
+    
+    # Find and extract inner zip
+    local inner_zip=$(find "$extract_base" -name "*.zip" -type f | head -1)
+    if [ -z "$inner_zip" ]; then
+        log_message "No inner zip found in $artifact_name artifact" "error"
+        return 1
+    fi
+    
+    local inner_extract="$extract_base-inner"
+    mkdir -p "$inner_extract"
+    if ! unzip -qq -o "$inner_zip" -d "$inner_extract"; then
+        log_message "Failed to extract inner $artifact_name zip" "error"
+        return 1
+    fi
+    
+    # Return the path to extracted content
+    echo "$inner_extract"
+    return 0
+}
+
+# Install ModSharp artifact sharp folder
+install_modsharp_artifact() {
+    local artifact_url="$1"
+    local artifact_name="$2"
+    local is_core="${3:-false}"  # true for core install (with config preservation), false for overlay
+    
+    local artifact_file="$TEMP_DIR/modsharp-${artifact_name}.zip"
+    local extract_base="$TEMP_DIR/modsharp-${artifact_name}"
+    
+    # Download artifact
+    if ! download_github_artifact "$artifact_url" "$artifact_file" "$artifact_name"; then
+        return 1
+    fi
+    
+    # Extract artifact (returns path to extracted content)
+    local extracted_path
+    extracted_path=$(extract_github_artifact "$artifact_file" "$extract_base" "$artifact_name")
+    if [ $? -ne 0 ] || [ -z "$extracted_path" ]; then
+        return 1
+    fi
+    
+    # Verify sharp folder exists
+    if [ ! -d "$extracted_path/sharp" ]; then
+        log_message "$artifact_name artifact structure not recognized - no sharp folder found" "error"
+        return 1
+    fi
+    
+    # Install files
+    if [ "$is_core" = "true" ]; then
+        log_message "Installing ModSharp core files..." "running"
+        copy_modsharp_files "$extracted_path/sharp"
+    else
+        log_message "Installing ModSharp $artifact_name..." "running"
+        cp -rf "$extracted_path/sharp/." "$MODSHARP_DIR/"
+        log_message "ModSharp $artifact_name installed successfully" "success"
+    fi
+    
+    return 0
+}
+
 # Centralized download and extract function
 handle_download_and_extract() {
     local url="$1"
@@ -333,22 +426,21 @@ update_modsharp() {
         log_message "  - $artifact_name" "running"
     done
 
-    # Find the Linux artifact (ModSharp-git*-linux)
-    local artifact_url=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-linux")) | .archive_download_url // empty' | head -1)
+    # Find both Linux and Extensions artifacts
+    local linux_artifact_url=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-linux")) | .archive_download_url // empty' | head -1)
+    local extensions_artifact_url=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-extensions")) | .archive_download_url // empty' | head -1)
     
-    if [ -z "$artifact_url" ]; then
+    if [ -z "$linux_artifact_url" ]; then
         log_message "No Linux ModSharp artifact found in workflow run $run_id" "error"
-        log_message "Trying alternative artifact pattern matching..." "running"
-        # Try a broader search pattern
-        artifact_url=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | contains("linux")) | .archive_download_url // empty' | head -1)
-        if [ -z "$artifact_url" ]; then
-            log_message "No artifacts containing 'linux' found either" "error"
-            return 1
-        fi
+        return 1
     fi
 
     log_message "Found ModSharp Linux artifact for version $new_version" "running"
-    log_message "Artifact URL: $artifact_url" "running"
+    if [ -n "$extensions_artifact_url" ]; then
+        log_message "Found ModSharp Extensions artifact for version $new_version" "running"
+    else
+        log_message "Warning: No Extensions artifact found - extensions will not be installed" "warn"
+    fi
 
     # GitHub requires authentication for artifact downloads, even for public repos
     if [ -z "${GITHUB_TOKEN:-}" ]; then
@@ -357,91 +449,24 @@ update_modsharp() {
         return 1
     fi
 
-    # Download the artifact with authentication (GitHub requires Bearer token for artifacts)
-    log_message "Downloading ModSharp artifact with authentication..." "running"
-    local download_success=false
-    local max_retries=3
-    local retry=0
-    
-    while [ $retry -lt $max_retries ]; do
-        if curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" -o "$TEMP_DIR/modsharp-artifact.zip" "$artifact_url"; then
-            download_success=true
-            break
-        fi
-        ((retry++))
-        log_message "Download attempt $retry failed, retrying..." "error"
-        sleep 5
-    done
-    
-    if [ "$download_success" = false ]; then
-        log_message "Failed to download ModSharp artifact after $max_retries attempts" "error"
-        log_message "Please check your GITHUB_TOKEN or network connectivity" "error"
+    # Install Linux artifact (core files with config preservation)
+    if ! install_modsharp_artifact "$linux_artifact_url" "Linux" "true"; then
+        log_message "Failed to install ModSharp Linux artifact" "error"
         return 1
     fi
 
-    # Verify the downloaded file exists and is not empty
-    if [ ! -s "$TEMP_DIR/modsharp-artifact.zip" ]; then
-        log_message "Downloaded artifact file is empty or missing" "error"
-        return 1
-    fi
-
-    # Extract the downloaded artifact
-    log_message "Extracting ModSharp artifact..." "running"
-    mkdir -p "$TEMP_DIR/modsharp"
-    if unzip -qq -o "$TEMP_DIR/modsharp-artifact.zip" -d "$TEMP_DIR/modsharp"; then
-        # Create ModSharp directory if it doesn't exist
-        mkdir -p "$MODSHARP_DIR"
-        
-        # Look for the actual ModSharp files in the extracted artifact
-        # The artifact might contain another zip file with the actual ModSharp release
-        local modsharp_zip=$(find "$TEMP_DIR/modsharp" -name "ModSharp-git*-linux*.zip" -type f | head -1)
-        
-        if [ -n "$modsharp_zip" ]; then
-            # Extract the inner ModSharp zip
-            if handle_download_and_extract "$modsharp_zip" "$modsharp_zip" "$TEMP_DIR/modsharp-inner" "zip"; then
-                # Copy ModSharp files to the sharp directory
-                if [ -d "$TEMP_DIR/modsharp-inner/sharp" ]; then
-                    copy_modsharp_files "$TEMP_DIR/modsharp-inner/sharp" && \
-                    create_modsharp_directories && \
-                    update_version_file "ModSharp" "$new_version" && \
-                    log_message "ModSharp update completed successfully" "success"
-                elif [ -d "$TEMP_DIR/modsharp-inner" ]; then
-                    # If the zip contains files directly, copy them
-                    copy_modsharp_files "$TEMP_DIR/modsharp-inner" && \
-                    create_modsharp_directories && \
-                    update_version_file "ModSharp" "$new_version" && \
-                    log_message "ModSharp update completed successfully" "success"
-                else
-                    log_message "ModSharp inner archive structure not recognized" "error"
-                    return 1
-                fi
-                return 0
-            else
-                log_message "Failed to extract inner ModSharp archive" "error"
-                return 1
-            fi
-        else
-            # Try direct extraction if no inner zip found
-            if [ -d "$TEMP_DIR/modsharp/sharp" ]; then
-                copy_modsharp_files "$TEMP_DIR/modsharp/sharp" && \
-                create_modsharp_directories && \
-                update_version_file "ModSharp" "$new_version" && \
-                log_message "ModSharp update completed successfully" "success"
-            elif [ -d "$TEMP_DIR/modsharp" ]; then
-                # If the artifact contains files directly, copy them
-                copy_modsharp_files "$TEMP_DIR/modsharp" && \
-                create_modsharp_directories && \
-                update_version_file "ModSharp" "$new_version" && \
-                log_message "ModSharp update completed successfully" "success"
-            else
-                log_message "ModSharp artifact structure not recognized" "error"
-                return 1
-            fi
-            return 0
+    # Install Extensions artifact if available (overlay on top)
+    if [ -n "$extensions_artifact_url" ]; then
+        if ! install_modsharp_artifact "$extensions_artifact_url" "Extensions" "false"; then
+            log_message "Warning: Failed to install extensions, continuing anyway..." "warn"
         fi
     fi
 
-    return 1
+    # Create required directories and update version
+    create_modsharp_directories
+    update_version_file "ModSharp" "$new_version"
+    log_message "ModSharp update completed successfully" "success"
+    return 0
 }
 
 update_modsharp_fallback() {
