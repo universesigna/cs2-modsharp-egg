@@ -85,14 +85,31 @@ download_github_artifact() {
     
     log_message "Downloading $artifact_name artifact..." "running"
     
-    if ! curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
-                    -H "Accept: application/vnd.github+json" \
-                    -H "X-GitHub-Api-Version: 2022-11-28" \
-                    -o "$output_file" "$artifact_url"; then
-        log_message "Failed to download $artifact_name artifact" "error"
+    # Use -S to show errors even with -s (silent progress)
+    local error_output
+    error_output=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
+                        -H "Accept: application/vnd.github+json" \
+                        -H "X-GitHub-Api-Version: 2022-11-28" \
+                        -o "$output_file" \
+                        -w "%{http_code}" \
+                        "$artifact_url" 2>&1)
+    local exit_code=$?
+    
+    if [ $exit_code -ne 0 ]; then
+        log_message "Failed to download $artifact_name artifact (exit code: $exit_code)" "error"
+        if [ -n "$error_output" ]; then
+            log_message "Error details: $error_output" "error"
+        fi
         return 1
     fi
     
+    # Verify file was downloaded and is not empty
+    if [ ! -s "$output_file" ]; then
+        log_message "Downloaded $artifact_name artifact is empty or missing" "error"
+        return 1
+    fi
+    
+    log_message "$artifact_name artifact downloaded successfully" "running"
     return 0
 }
 
@@ -138,6 +155,8 @@ install_modsharp_artifact() {
     
     local artifact_file="$TEMP_DIR/modsharp-${artifact_name}.zip"
     local extract_base="$TEMP_DIR/modsharp-${artifact_name}"
+    
+    log_message "Artifact URL: $artifact_url" "running"
     
     # Download artifact
     if ! download_github_artifact "$artifact_url" "$artifact_file" "$artifact_name"; then
