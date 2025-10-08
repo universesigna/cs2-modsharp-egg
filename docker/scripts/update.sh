@@ -119,33 +119,37 @@ extract_github_artifact() {
     local extract_base="$2"
     local artifact_name="$3"
     
-    log_message "Extracting $artifact_name artifact..." "running"
+    # All output except the final echo should go to stderr
+    {
+        log_message "Extracting $artifact_name artifact..." "running"
+        
+        # Verify the zip file exists and is not empty
+        if [ ! -s "$artifact_zip" ]; then
+            log_message "Artifact zip file is missing or empty: $artifact_zip" "error"
+            return 1
+        fi
+        
+        # Extract the zip
+        mkdir -p "$extract_base"
+        if ! unzip -qq -o "$artifact_zip" -d "$extract_base" 2>&1; then
+            log_message "Failed to extract $artifact_name artifact" "error"
+            return 1
+        fi
+        
+        # The sharp folder should be at the root of the extracted content
+        if [ ! -d "$extract_base/sharp" ]; then
+            log_message "No sharp folder found in $artifact_name artifact" "error"
+            log_message "Contents of $extract_base:" "running"
+            ls -la "$extract_base" 2>&1 | while read -r line; do
+                log_message "  $line" "running"
+            done
+            return 1
+        fi
+        
+        log_message "Successfully extracted $artifact_name artifact" "running"
+    } >&2
     
-    # Verify the zip file exists and is not empty
-    if [ ! -s "$artifact_zip" ]; then
-        log_message "Artifact zip file is missing or empty: $artifact_zip" "error"
-        return 1
-    fi
-    
-    # Extract the zip
-    mkdir -p "$extract_base"
-    if ! unzip -qq -o "$artifact_zip" -d "$extract_base" 2>&1; then
-        log_message "Failed to extract $artifact_name artifact" "error"
-        return 1
-    fi
-    
-    # The sharp folder should be at the root of the extracted content
-    if [ ! -d "$extract_base/sharp" ]; then
-        log_message "No sharp folder found in $artifact_name artifact" "error"
-        log_message "Contents of $extract_base:" "running"
-        ls -la "$extract_base" 2>&1 | while read -r line; do
-            log_message "  $line" "running"
-        done
-        return 1
-    fi
-    
-    log_message "Successfully extracted $artifact_name artifact" "running"
-    # Return the path to extracted content
+    # Return the path to extracted content (ONLY this goes to stdout)
     echo "$extract_base"
     return 0
 }
