@@ -113,7 +113,7 @@ download_github_artifact() {
     return 0
 }
 
-# Extract GitHub artifact (simple extraction, sharp folder is at root)
+# Extract GitHub artifact (handles both sharp/ structure and direct content)
 extract_github_artifact() {
     local artifact_zip="$1"
     local extract_base="$2"
@@ -133,16 +133,6 @@ extract_github_artifact() {
         mkdir -p "$extract_base"
         if ! unzip -qq -o "$artifact_zip" -d "$extract_base" 2>&1; then
             log_message "Failed to extract $artifact_name artifact" "error"
-            return 1
-        fi
-        
-        # The sharp folder should be at the root of the extracted content
-        if [ ! -d "$extract_base/sharp" ]; then
-            log_message "No sharp folder found in $artifact_name artifact" "error"
-            log_message "Contents of $extract_base:" "running"
-            ls -la "$extract_base" 2>&1 | while read -r line; do
-                log_message "  $line" "running"
-            done
             return 1
         fi
         
@@ -172,39 +162,51 @@ install_modsharp_artifact() {
     fi
     
     # Extract artifact (returns path to extracted content)
-    log_message "Starting extraction for $artifact_name..." "running"
     local extracted_path
     extracted_path=$(extract_github_artifact "$artifact_file" "$extract_base" "$artifact_name")
     local extract_result=$?
-    
-    log_message "Extraction result: $extract_result, path: $extracted_path" "running"
     
     if [ $extract_result -ne 0 ] || [ -z "$extracted_path" ]; then
         log_message "Extraction failed for $artifact_name (result: $extract_result)" "error"
         return 1
     fi
     
-    # Verify sharp folder exists
-    log_message "Checking for sharp folder in: $extracted_path" "running"
-    if [ ! -d "$extracted_path/sharp" ]; then
-        log_message "$artifact_name artifact structure not recognized - no sharp folder found" "error"
-        log_message "Contents of $extracted_path:" "running"
-        ls -la "$extracted_path" 2>&1 | while read -r line; do
-            log_message "  $line" "running"
-        done
-        return 1
-    fi
-    
-    log_message "Found sharp folder, proceeding with installation" "running"
-    
-    # Install files
-    if [ "$is_core" = "true" ]; then
-        log_message "Installing ModSharp core files..." "running"
-        copy_modsharp_files "$extracted_path/sharp"
+    # Determine structure and install accordingly
+    if [ -d "$extracted_path/sharp" ]; then
+        # Structure 1: artifact contains sharp/ folder (Linux core artifact)
+        log_message "Found sharp/ folder structure in $artifact_name" "running"
+        
+        if [ "$is_core" = "true" ]; then
+            log_message "Installing ModSharp core files..." "running"
+            copy_modsharp_files "$extracted_path/sharp"
+        else
+            log_message "Installing ModSharp $artifact_name..." "running"
+            cp -rf "$extracted_path/sharp/." "$MODSHARP_DIR/"
+            log_message "ModSharp $artifact_name installed successfully" "success"
+        fi
     else
-        log_message "Installing ModSharp $artifact_name..." "running"
-        cp -rf "$extracted_path/sharp/." "$MODSHARP_DIR/"
-        log_message "ModSharp $artifact_name installed successfully" "success"
+        # Structure 2: artifact contains extension folders directly (Extensions artifact)
+        # These should go into shared/ directory
+        log_message "Found direct folder structure in $artifact_name, installing to shared/" "running"
+        
+        mkdir -p "$MODSHARP_DIR/shared"
+        
+        # Copy all subdirectories to shared/
+        local installed_count=0
+        for item in "$extracted_path"/*; do
+            if [ -d "$item" ]; then
+                local folder_name=$(basename "$item")
+                log_message "Installing extension: $folder_name" "running"
+                cp -rf "$item" "$MODSHARP_DIR/shared/"
+                ((installed_count++))
+            fi
+        done
+        
+        if [ $installed_count -gt 0 ]; then
+            log_message "ModSharp $artifact_name: installed $installed_count extensions to shared/" "success"
+        else
+            log_message "Warning: No extension folders found in $artifact_name" "warn"
+        fi
     fi
     
     return 0
