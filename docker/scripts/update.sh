@@ -466,11 +466,11 @@ update_modsharp() {
         log_message "  - $artifact_name" "running"
     done
 
-    # Find both Linux and Extensions artifacts
-    local linux_artifact_url=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-linux")) | .archive_download_url // empty' | head -1)
-    local linux_artifact_name=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-linux")) | .name // empty' | head -1)
-    local extensions_artifact_url=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-extensions")) | .archive_download_url // empty' | head -1)
-    local extensions_artifact_name=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git.*-extensions")) | .name // empty' | head -1)
+    # Find both Linux and Extensions artifacts (note: core linux artifact should NOT contain "extensions" in name)
+    local linux_artifact_url=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git[0-9]+-linux$")) | .archive_download_url // empty' | head -1)
+    local linux_artifact_name=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git[0-9]+-linux$")) | .name // empty' | head -1)
+    local extensions_artifact_url=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git[0-9]+-linux-extensions")) | .archive_download_url // empty' | head -1)
+    local extensions_artifact_name=$(echo "$artifacts_response" | jq -r '.artifacts[] | select(.name | test("ModSharp-git[0-9]+-linux-extensions")) | .name // empty' | head -1)
     
     if [ -z "$linux_artifact_url" ]; then
         log_message "No Linux ModSharp artifact found in workflow run $run_id" "error"
