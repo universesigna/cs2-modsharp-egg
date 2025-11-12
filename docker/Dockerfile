@@ -13,6 +13,7 @@ RUN         mkdir -p /etc/sudoers.d && \
 ENV         DEBIAN_FRONTEND=noninteractive
 RUN         apt update && \
             apt install -y iproute2 jq unzip expect rsync curl && \
+            apt install dotnet
             apt-get clean
 
 # Create directories and copy files
