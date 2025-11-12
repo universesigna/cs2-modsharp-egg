@@ -333,73 +333,48 @@ update_addon() {
     return 1
 }
 
-get_latest_dotnet_version() {
-    local requested_version="${DOTNET_VERSION:-9}"
-    
-    # If it's already a full version (e.g., "9.0.0"), use it as-is
-    if [[ "$requested_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "$requested_version"
-        return 0
-    fi
-    
-    # If it's a major version (e.g., "9"), fetch the latest patch version
-    log_message "Fetching latest .NET $requested_version runtime version..." "running"
-    
-    # Query Microsoft's official releases API for the latest version
-    local releases_response=$(curl -s "https://api.github.com/repos/dotnet/core/releases" 2>/dev/null)
-    if [ -n "$releases_response" ]; then
-        # Look for the latest release that starts with the requested major version
-        local latest_version=$(echo "$releases_response" | jq -r --arg major "$requested_version" '.[] | select(.tag_name | startswith("v" + $major + ".")) | .tag_name' | head -1 | sed 's/^v//')
-        if [ -n "$latest_version" ]; then
-            log_message "Found latest .NET $requested_version version: $latest_version" "running"
-            echo "$latest_version"
-            return 0
-        fi
-    fi
-    
-    # Alternative: try Microsoft's releases JSON API
-    local alt_response=$(curl -s "https://dotnetcli.azureedge.net/dotnet/release-metadata/releases-index.json" 2>/dev/null)
-    if [ -n "$alt_response" ]; then
-        local latest_version=$(echo "$alt_response" | jq -r --arg major "$requested_version" '.releases-index[] | select(.["channel-version"] | startswith($major + ".")) | .["latest-release"]' | head -1)
-        if [ -n "$latest_version" ]; then
-            log_message "Found latest .NET $requested_version version: $latest_version" "running"
-            echo "$latest_version"
-            return 0
-        fi
-    fi
-    
-    # Fallback: construct a reasonable default
-    case "$requested_version" in
-        "9") echo "9.0.9" ;;
-        *) echo "$requested_version.0.0" ;;
-    esac
-}
-
 install_dotnet_runtime() {
-    local runtime_dir="$MODSHARP_DIR/runtime"
-    local dotnet_version=$(get_latest_dotnet_version)
-    local current_dotnet_version=$(get_current_version "DotNet")
-    
-    # Check if we need to update .NET runtime
-    if [ "$current_dotnet_version" = "$dotnet_version" ]; then
-        log_message ".NET runtime already up to date: $dotnet_version" "running"
+    local requested_version="${DOTNET_VERSION:-9}"
+    local package_name="dotnet-runtime-${requested_version}.0"
+   
+    # Check if already installed
+    if dpkg -l 2>/dev/null | grep -q "^ii  ${package_name} "; then
+        log_message ".NET ${requested_version} runtime already installed" "running"
         return 0
     fi
-    
-    log_message "Installing .NET $dotnet_version runtime for ModSharp..." "running"
-    
-    # Create runtime directory
-    mkdir -p "$runtime_dir"
-    
-    # Download and extract .NET runtime
-    local dotnet_url="https://dotnetcli.azureedge.net/dotnet/Runtime/$dotnet_version/dotnet-runtime-$dotnet_version-linux-x64.tar.gz"
-    
-    if handle_download_and_extract "$dotnet_url" "$TEMP_DIR/dotnet-runtime.tar.gz" "$runtime_dir" "tar.gz"; then
-        update_version_file "DotNet" "$dotnet_version"
-        log_message ".NET $dotnet_version runtime installed successfully" "success"
+   
+    log_message "Installing .NET ${requested_version} runtime via APT..." "running"
+   
+    # Add .NET backports PPA if not already present (required for .NET 9 on Ubuntu 22.04/24.04)
+    if ! grep -q "ppa:dotnet/backports" /etc/apt/sources.list.d/*.list 2>/dev/null; then
+        log_message "Adding .NET backports PPA..." "running"
+        if ! add-apt-repository ppa:dotnet/backports -y; then
+            log_message "Failed to add .NET backports PPA (may require sudo or manual intervention)" "error"
+            return 1
+        fi
+    fi
+   
+    # Update package list
+    log_message "Updating package list..." "running"
+    if ! apt-get update -qq; then
+        log_message "Failed to update package list" "error"
+        return 1
+    fi
+   
+    # Install the runtime
+    log_message "Installing ${package_name}..." "running"
+    if apt-get install -y "${package_name}"; then
+        log_message ".NET ${requested_version} runtime installed successfully" "success"
+       
+        # Verify installation
+        if command -v dotnet >/dev/null 2>&1 && dotnet --list-runtimes 2>/dev/null | grep -q "Microsoft.NETCore.App ${requested_version}\."; then
+            log_message "Verification: .NET ${requested_version} runtime is available" "success"
+        else
+            log_message "Warning: .NET ${requested_version} runtime verification failed (dotnet command may not be in PATH yet)" "warning"
+        fi
         return 0
     else
-        log_message "Failed to install .NET $dotnet_version runtime" "error"
+        log_message "Failed to install ${package_name} - check if PPA is correctly added or try manual install" "error"
         return 1
     fi
 }
