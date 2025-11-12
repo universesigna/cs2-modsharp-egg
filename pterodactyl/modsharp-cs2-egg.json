@@ -45,7 +45,7 @@
             "default_value": "",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|string|alpha_dash",
+            "rules": "string|alpha_dash",
             "field_type": "text"
         },
         {
@@ -105,7 +105,7 @@
             "default_value": "0",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|numeric|in:0,1,2,3,4,5,6",
+            "rules": "required|numeric|in:0,1,2,3,4,5,6 game_type 3 and game_mode 0",
             "field_type": "text"
         },
         {
@@ -115,7 +115,7 @@
             "default_value": "0",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|numeric|in:0,1,2,3,4",
+            "rules": "required|numeric|in:0,1,2,3,4 game_type 3 and game_mode 0",
             "field_type": "text"
         },
         {
